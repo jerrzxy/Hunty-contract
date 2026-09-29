@@ -192,6 +192,48 @@ impl Storage {
 
     const TEAM_PROGRESS_KEY: soroban_sdk::Symbol = symbol_short!("TMPR");
 
+    const RATE_LIMIT_KEY: soroban_sdk::Symbol = symbol_short!("HRATE");
+
+    /// Returns the namespaced persistent storage key for a creator's daily
+    /// rate-limit counter. Using a tuple key keeps the counter from colliding
+    /// with any other feature that keys persistent data by a bare `Address`.
+    pub fn rate_limit_key(env: &Env, creator: &Address) -> (soroban_sdk::Symbol, Address) {
+        (Self::RATE_LIMIT_KEY, creator.clone())
+    }
+
+    /// Reads the creator's daily rate-limit counter, migrating a legacy entry
+    /// stored under the bare `Address` key if one exists.
+    pub fn get_rate_limit(env: &Env, creator: &Address) -> Option<CreatorDailyHuntCount> {
+        let key = Self::rate_limit_key(env, creator);
+
+        if let Some(value) = env.storage().persistent().get(&key) {
+            return Some(value);
+        }
+
+        // Migrate a legacy entry stored under the bare creator Address.
+        if let Some(legacy) = env.storage().persistent().get(creator) {
+            env.storage().persistent().set(&key, &legacy);
+
+            env.storage().persistent().remove(creator);
+
+            extend_ttl(env, &key, TtlPolicy::Default);
+
+            return Some(legacy);
+        }
+
+        None
+    }
+
+    /// Persists the creator's daily rate-limit counter under the namespaced
+    /// key and extends its TTL so the entry cannot expire mid-day.
+    pub fn set_rate_limit(env: &Env, creator: &Address, value: &CreatorDailyHuntCount) {
+        let key = Self::rate_limit_key(env, creator);
+
+        env.storage().persistent().set(&key, value);
+
+        extend_ttl(env, &key, TtlPolicy::Default);
+    }
+
     // Pause functions (granular: registrations, answers, rewards)
 
     pub fn set_pause_registrations(env: &Env, paused: bool) {
