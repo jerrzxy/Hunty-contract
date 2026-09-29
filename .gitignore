@@ -39,3 +39,7 @@ cargo_*.log
 test_out*.txt
 test_create_out*.txt
 *_diff.txt
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore

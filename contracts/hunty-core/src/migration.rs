@@ -115,6 +115,12 @@ impl HuntyCoreMigration {
                     }
                     current = 1;
                 }
+                1 => {
+                    if !dry_run {
+                        Self::migrate_v1_to_v2(env);
+                    }
+                    current = 2;
+                }
                 // v1 -> v2: not yet implemented.
                 // Add the arm here (and the migrate_v1_to_v2 fn below) once
                 // the new storage layout is defined. Until then the `_ =>`
